@@ -86,9 +86,8 @@ export function ExportMenu({
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth * ratio, imgHeight * ratio);
       pdf.save(`${fileName}.pdf`);
       toast.success("PDF downloaded successfully!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to export PDF");
-      console.error(error);
     } finally {
       setIsExporting(null);
     }
@@ -114,9 +113,8 @@ export function ExportMenu({
       );
       link.click();
       toast.success(`${format.toUpperCase()} downloaded successfully!`);
-    } catch (error) {
+    } catch {
       toast.error(`Failed to export ${format.toUpperCase()}`);
-      console.error(error);
     } finally {
       setIsExporting(null);
     }
@@ -134,9 +132,8 @@ export function ExportMenu({
       link.click();
       URL.revokeObjectURL(url);
       toast.success("JSON exported successfully!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to export JSON");
-      console.error(error);
     } finally {
       setIsExporting(null);
     }

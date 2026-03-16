@@ -156,8 +156,7 @@ export default function OutputPage() {
         } else if (resumeData) {
           setLocalResumeData(normalizeResume(resumeData));
         }
-      } catch (error) {
-        console.error("Error loading CV:", error);
+      } catch {
         toast.error("Failed to load resume data");
       } finally {
         setIsLoading(false);
@@ -212,9 +211,8 @@ export default function OutputPage() {
         },
       });
       toast.success("Resume saved successfully!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to save resume");
-      console.error(error);
     } finally {
       setIsSaving(false);
     }

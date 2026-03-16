@@ -210,13 +210,13 @@ export function Footer() {
               <ul className="space-y-4">
                 <li>
                   <a
-                    href="mailto:support@resumeachieve.com"
+                    href="mailto:resumeachieve@gmail.com"
                     className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors text-sm"
                   >
                     <div className="h-8 w-8 rounded-lg bg-gray-800/50 flex items-center justify-center">
                       <Mail className="h-4 w-4 text-purple-400" />
                     </div>
-                    support@resumeachieve.com
+                    resumeachieve@gmail.com
                   </a>
                 </li>
                 <li>

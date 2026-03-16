@@ -16,7 +16,6 @@ export async function POST(request: NextRequest) {
 
     const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-
     global.otpStore = global.otpStore || {};
     global.otpStore[email] = {
       otp: mockOtp,
@@ -27,8 +26,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "OTP sent successfully",
     });
-  } catch (error) {
-    console.error("Send OTP error:", error);
+  } catch {
     return NextResponse.json({ error: "Failed to send OTP" }, { status: 500 });
   }
 }

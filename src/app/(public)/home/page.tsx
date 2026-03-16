@@ -19,7 +19,10 @@ import {
   TrendingUp,
   Award,
 } from "lucide-react";
-import { testimonialsService, TestimonialData } from "@/services/testimonials.service";
+import {
+  testimonialsService,
+  TestimonialData,
+} from "@/services/testimonials.service";
 import { toast } from "sonner";
 
 if (typeof window !== "undefined") {
@@ -46,8 +49,8 @@ export default function HomePage() {
       try {
         const data = await testimonialsService.getApprovedTestimonials();
         setTestimonials(data.testimonials || []);
-      } catch (err) {
-        console.error("Failed to fetch testimonials", err);
+      } catch {
+        // Failed to fetch testimonials
       }
     };
     fetchTestimonials();
@@ -233,9 +236,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-10 text-center text-white">
             {[
-              { value: "50K+", label: "Resumes Created" },
-              { value: "95%", label: "ATS Success Rate" },
-              { value: "2M+", label: "Job Applications" },
+              { value: "10K+", label: "Resumes Created" },
+              { value: "90%", label: "ATS Success Rate" },
+              { value: "1K+", label: "Job Applications" },
               { value: "4.9★", label: "User Rating" },
             ].map(({ value, label }, i) => (
               <div key={i} className="stat-item">
@@ -304,10 +307,11 @@ export default function HomePage() {
                 What Our <span className="text-purple-600">Users Say</span>
               </h2>
               <p className="text-xl text-gray-500 font-medium max-w-xl">
-                Real feedback from professionals who accelerated their career with ResumeAchieve.
+                Real feedback from professionals who accelerated their career
+                with ResumeAchieve.
               </p>
             </div>
-            <Button 
+            <Button
               onClick={() => setShowFeedbackForm(true)}
               className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-purple-200 transition-all hover:scale-105"
             >
@@ -316,72 +320,104 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {testimonials.length > 0 ? (
-              testimonials.map((t, i) => (
-                <div
-                  key={i}
-                  className="p-8 rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-2xl transition-all group"
-                >
-                  <div className="flex gap-1 mb-6">
-                    {Array.from({ length: t.rating || 5 }).map((_, j) => (
-                      <Star
-                        key={j}
-                        className="h-5 w-5 text-yellow-500 fill-yellow-500"
-                      />
-                    ))}
-                  </div>
-                  <p className="text-gray-600 mb-8 leading-relaxed font-medium italic text-lg">
-                    "{t.feedback}"
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center font-bold text-purple-600 border border-purple-200">
-                      {t.name.charAt(0)}
+            {testimonials.length > 0
+              ? testimonials.map((t, i) => (
+                  <div
+                    key={i}
+                    className="p-8 rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-2xl transition-all group"
+                  >
+                    <div className="flex gap-1 mb-6">
+                      {Array.from({ length: t.rating || 5 }).map((_, j) => (
+                        <Star
+                          key={j}
+                          className="h-5 w-5 text-yellow-500 fill-yellow-500"
+                        />
+                      ))}
                     </div>
-                    <div>
-                      <div className="font-extrabold text-gray-900">{t.name}</div>
-                      <div className="text-sm text-purple-600 font-bold uppercase tracking-wider">
-                        {t.designation}
+                    <p className="text-gray-600 mb-8 leading-relaxed font-medium italic text-lg">
+                      "{t.feedback}"
+                    </p>
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center font-bold text-purple-600 border border-purple-200">
+                        {t.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-extrabold text-gray-900">
+                          {t.name}
+                        </div>
+                        <div className="text-sm text-purple-600 font-bold uppercase tracking-wider">
+                          {t.designation}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
-            ) : (
-
-              [
-                { name: "Arjun Sharma", role: "Software Engineer", feedback: "ResumeAchieve helped me land my dream job at Google. The ATS score went from 62 to 96 after using the AI optimization!" },
-                { name: "Priya Nair", role: "Product Manager", feedback: "The AI understood the job description perfectly and restructured my resume beautifully." },
-                { name: "Rahul Verma", role: "Data Analyst", feedback: "Uploaded my old CV, and it was completely transformed into an ATS-friendly format." }
-              ].map((t, i) => (
-                <div key={i} className="p-8 rounded-[2.5rem] bg-zinc-50 border border-zinc-100 shadow-sm opacity-60">
-                   <p className="text-gray-600 italic">"{t.feedback}"</p>
-                   <p className="mt-4 font-bold text-gray-900">{t.name} — {t.role}</p>
-                </div>
-              ))
-            )}
+                ))
+              : [
+                  {
+                    name: "Arjun Sharma",
+                    role: "Software Engineer",
+                    feedback:
+                      "ResumeAchieve helped me land my dream job at Google. The ATS score went from 62 to 96 after using the AI optimization!",
+                  },
+                  {
+                    name: "Priya Nair",
+                    role: "Product Manager",
+                    feedback:
+                      "The AI understood the job description perfectly and restructured my resume beautifully.",
+                  },
+                  {
+                    name: "Rahul Verma",
+                    role: "Data Analyst",
+                    feedback:
+                      "Uploaded my old CV, and it was completely transformed into an ATS-friendly format.",
+                  },
+                ].map((t, i) => (
+                  <div
+                    key={i}
+                    className="p-8 rounded-[2.5rem] bg-zinc-50 border border-zinc-100 shadow-sm opacity-60"
+                  >
+                    <p className="text-gray-600 italic">"{t.feedback}"</p>
+                    <p className="mt-4 font-bold text-gray-900">
+                      {t.name} — {t.role}
+                    </p>
+                  </div>
+                ))}
           </div>
 
           {showFeedbackForm && (
             <div className="bg-purple-50 rounded-[3rem] p-10 lg:p-16 border border-purple-100 relative max-w-4xl mx-auto shadow-inner animate-in slide-in-from-bottom-10">
-              <button 
+              <button
                 onClick={() => setShowFeedbackForm(false)}
                 className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors"
                 title="Close"
               >
                 <CheckCircle className="h-8 w-8 rotate-45" />
               </button>
-              <h3 className="text-3xl font-black text-gray-900 mb-2 font-outfit">Your Feedback Matters</h3>
-              <p className="text-gray-600 mb-10 font-medium">Inspire others by sharing how ResumeAchieve helped your career journey.</p>
-              
-              <form 
+              <h3 className="text-3xl font-black text-gray-900 mb-2 font-outfit">
+                Your Feedback Matters
+              </h3>
+              <p className="text-gray-600 mb-10 font-medium">
+                Inspire others by sharing how ResumeAchieve helped your career
+                journey.
+              </p>
+
+              <form
                 className="grid md:grid-cols-2 gap-8"
                 onSubmit={async (e) => {
                   e.preventDefault();
                   try {
                     await testimonialsService.submitTestimonial(feedbackForm);
-                    toast.success("Thank you! Your feedback has been submitted for approval.");
+                    toast.success(
+                      "Thank you! Your feedback has been submitted for approval.",
+                    );
                     setShowFeedbackForm(false);
-                    setFeedbackForm({ name: "", designation: "", feedback: "", rating: 5, email: "" });
+                    setFeedbackForm({
+                      name: "",
+                      designation: "",
+                      feedback: "",
+                      rating: 5,
+                      email: "",
+                    });
                   } catch (err) {
                     toast.error("Failed to submit feedback. Please try again.");
                   }
@@ -389,55 +425,85 @@ export default function HomePage() {
               >
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Your Name</label>
-                    <input 
-                      type="text" 
+                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
                       required
                       value={feedbackForm.name}
-                      onChange={e => setFeedbackForm({...feedbackForm, name: e.target.value})}
+                      onChange={(e) =>
+                        setFeedbackForm({
+                          ...feedbackForm,
+                          name: e.target.value,
+                        })
+                      }
                       className="w-full bg-white border border-gray-200 rounded-2xl p-4 font-bold focus:border-purple-600 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Designation</label>
-                    <input 
+                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">
+                      Designation
+                    </label>
+                    <input
                       type="text"
                       required
                       value={feedbackForm.designation}
-                      onChange={e => setFeedbackForm({...feedbackForm, designation: e.target.value})}
+                      onChange={(e) =>
+                        setFeedbackForm({
+                          ...feedbackForm,
+                          designation: e.target.value,
+                        })
+                      }
                       placeholder="e.g. Senior Developer"
                       className="w-full bg-white border border-gray-200 rounded-2xl p-4 font-bold focus:border-purple-600 outline-none"
                     />
                   </div>
                 </div>
                 <div className="space-y-6">
-                   <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Rating</label>
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">
+                      Rating
+                    </label>
                     <div className="flex gap-2">
-                       {[1,2,3,4,5].map(r => (
-                         <button 
+                      {[1, 2, 3, 4, 5].map((r) => (
+                        <button
                           type="button"
-                          key={r} 
-                          onClick={() => setFeedbackForm({...feedbackForm, rating: r})}
+                          key={r}
+                          onClick={() =>
+                            setFeedbackForm({ ...feedbackForm, rating: r })
+                          }
                           className={`p-2 rounded-xl border ${feedbackForm.rating >= r ? "border-yellow-500 bg-yellow-50" : "border-gray-200"}`}
-                         >
-                           <Star className={`h-6 w-6 ${feedbackForm.rating >= r ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`} />
-                         </button>
-                       ))}
+                        >
+                          <Star
+                            className={`h-6 w-6 ${feedbackForm.rating >= r ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}`}
+                          />
+                        </button>
+                      ))}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Your Story</label>
-                    <textarea 
+                    <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">
+                      Your Story
+                    </label>
+                    <textarea
                       required
                       rows={4}
                       value={feedbackForm.feedback}
-                      onChange={e => setFeedbackForm({...feedbackForm, feedback: e.target.value})}
+                      onChange={(e) =>
+                        setFeedbackForm({
+                          ...feedbackForm,
+                          feedback: e.target.value,
+                        })
+                      }
                       className="w-full bg-white border border-gray-200 rounded-2xl p-4 font-medium focus:border-purple-600 outline-none resize-none"
                     />
                   </div>
                 </div>
-                <Button type="submit" className="md:col-span-2 h-16 rounded-2xl bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all">
+                <Button
+                  type="submit"
+                  className="md:col-span-2 h-16 rounded-2xl bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all"
+                >
                   Submit Feedback
                 </Button>
               </form>

@@ -21,8 +21,7 @@ export async function POST(request: NextRequest) {
         "Keep it concise and impactful",
       ],
     });
-  } catch (error) {
-    console.error("AI refine error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to refine content" },
       { status: 500 },

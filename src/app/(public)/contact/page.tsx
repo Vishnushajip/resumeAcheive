@@ -76,7 +76,7 @@ export default function ContactPage() {
                       icon: Mail,
                       color: "bg-purple-100 text-purple-600",
                       label: "Email",
-                      value: "support@resumeachieve.com",
+                      value: "resumeachieve@gmail.com",
                     },
                     {
                       icon: Phone,

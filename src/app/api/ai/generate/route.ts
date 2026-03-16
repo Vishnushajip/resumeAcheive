@@ -3,7 +3,6 @@ import { Experience } from "@/types/resume";
 
 export async function POST(request: NextRequest) {
   try {
-    
     const { userData, jobDescription, rawText } = await request.json();
 
     const mockResume = {
@@ -53,10 +52,8 @@ export async function POST(request: NextRequest) {
       missingKeywords: mockMissingKeywords,
     };
 
-    
     return NextResponse.json(response);
-  } catch (error) {
-    console.error("AI generation error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to generate resume" },
       { status: 500 },
@@ -65,7 +62,6 @@ export async function POST(request: NextRequest) {
 }
 
 function parseExperience(experience: string) {
-
   return [
     {
       company: "Current Company",

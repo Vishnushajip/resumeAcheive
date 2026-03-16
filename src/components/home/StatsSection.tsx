@@ -9,10 +9,10 @@ if (typeof window !== "undefined") {
 }
 
 const stats = [
-  { value: "50K+", label: "Resumes Created" },
-  { value: "95%", label: "ATS Success Rate" },
-  { value: "2M+", label: "Job Applications" },
-  { value: "4.9★", label: "User Rating" },
+  { value: "10K+", label: "Resumes Created" },
+  { value: "90%", label: "ATS Success Rate" },
+  { value: "1K+", label: "Job Applications" },
+  { value: "4.5★", label: "User Rating" },
 ];
 
 export function StatsSection() {

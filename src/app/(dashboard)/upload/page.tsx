@@ -201,8 +201,6 @@ export default function UploadPage() {
 
       await autoGenerateCV(text);
     } catch (error: any) {
-      console.error("OCR Error:", error);
-
       let errorMessage = "Failed to extract text from the image.";
 
       if (error.message?.includes("network")) {
@@ -295,8 +293,7 @@ export default function UploadPage() {
       toast.success("Resume generated! Redirecting to editor...");
 
       router.push(`/dashboard/builder/${result.id}`);
-    } catch (error) {
-      console.error("Processing error:", error);
+    } catch {
       toast.error(
         "Failed to generate resume. You can try again or edit manually.",
       );

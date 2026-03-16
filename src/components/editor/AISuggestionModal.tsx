@@ -73,9 +73,8 @@ export function AISuggestionModal({
               : JSON.stringify(result);
       setSuggestion(refinedText);
       setHasGenerated(true);
-    } catch (error) {
+    } catch {
       toast.error("Failed to generate suggestion");
-      console.error(error);
     } finally {
       setIsLoading(false);
     }

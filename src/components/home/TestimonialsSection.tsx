@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { testimonialsService, TestimonialData } from "@/services/testimonials.service";
+import {
+  testimonialsService,
+  TestimonialData,
+} from "@/services/testimonials.service";
 import { Star, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -17,8 +20,8 @@ export function TestimonialsSection() {
       const data = await testimonialsService.getApprovedTestimonials(p, 3);
       setTestimonials(data.testimonials || []);
       setTotalPages(data.totalPages || 1);
-    } catch (error) {
-      console.error("Failed to fetch testimonials:", error);
+    } catch {
+      // Failed to fetch testimonials
     } finally {
       setLoading(false);
     }
@@ -37,7 +40,9 @@ export function TestimonialsSection() {
           <h2 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter font-outfit">
             What Our Users Say
           </h2>
-          <p className="text-zinc-500 font-medium">Real success stories from our global community</p>
+          <p className="text-zinc-500 font-medium">
+            Real success stories from our global community
+          </p>
         </div>
 
         {loading ? (
@@ -68,7 +73,9 @@ export function TestimonialsSection() {
                       {t.name?.charAt(0) || "U"}
                     </div>
                     <div>
-                      <div className="font-black text-gray-900 font-outfit">{t.name}</div>
+                      <div className="font-black text-gray-900 font-outfit">
+                        {t.name}
+                      </div>
                       <div className="text-sm text-primary font-bold">
                         {t.designation}
                       </div>
@@ -84,7 +91,7 @@ export function TestimonialsSection() {
                   variant="outline"
                   size="sm"
                   disabled={page === 1}
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                   className="rounded-xl"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -96,7 +103,7 @@ export function TestimonialsSection() {
                   variant="outline"
                   size="sm"
                   disabled={page === totalPages}
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   className="rounded-xl"
                 >
                   <ChevronRight className="h-4 w-4" />

@@ -137,7 +137,7 @@ export default function RootLayout({
     ],
     contactPoint: {
       "@type": "ContactPoint",
-      email: "support@resumeachieve.com",
+      email: "resumeachieve@gmail.com",
       contactType: "customer support",
     },
   };

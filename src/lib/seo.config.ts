@@ -24,7 +24,7 @@ export const siteConfig = {
   language: "en",
 
   // Contact info
-  email: "support@resumeachieve.com",
+  email: "resumeachieve@gmail.com",
   twitter: "@resumeachieve",
 
   // Search Console Verification Codes
@@ -32,7 +32,7 @@ export const siteConfig = {
   googleVerification: "your-google-verification-code",
   bingVerification: "your-bing-verification-code",
 
-  // IndexNow API Key (from Bing Webmaster Tools)
+    // IndexNow API Key (from Bing Webmaster Tools)
   // Set as environment variable: BING_INDEXNOW_KEY
 
   // Branding

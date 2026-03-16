@@ -110,10 +110,10 @@ export default function AboutPage() {
           </div>
           <div className="grid md:grid-cols-4 gap-8 text-center">
             {[
-              { value: "50K+", label: "Resumes Created" },
-              { value: "95%", label: "ATS Success Rate" },
-              { value: "2M+", label: "Job Applications" },
-              { value: "4.9★", label: "User Rating" },
+              { value: "10K+", label: "Resumes Created" },
+              { value: "90%", label: "ATS Success Rate" },
+              { value: "1M+", label: "Job Applications" },
+              { value: "4.5★", label: "User Rating" },
             ].map(({ value, label }, i) => (
               <div key={i}>
                 <div className="text-5xl font-bold mb-2">{value}</div>

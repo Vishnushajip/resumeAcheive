@@ -7,35 +7,38 @@ import { toast } from "sonner";
 
 interface ExportButtonProps {
   resumeData: any;
-  format: 'pdf' | 'docx' | 'json' | 'png';
+  format: "pdf" | "docx" | "json" | "png";
   className?: string;
 }
 
-export function ExportButton({ resumeData, format, className }: ExportButtonProps) {
+export function ExportButton({
+  resumeData,
+  format,
+  className,
+}: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
     setIsExporting(true);
-    
+
     try {
       switch (format) {
-        case 'json':
+        case "json":
           exportAsJSON();
           break;
-        case 'png':
+        case "png":
           await exportAsPNG();
           break;
-        case 'pdf':
+        case "pdf":
           await exportAsPDF();
           break;
-        case 'docx':
+        case "docx":
           await exportAsDOCX();
           break;
         default:
-          throw new Error('Unsupported format');
+          throw new Error("Unsupported format");
       }
-    } catch (error) {
-      console.error('Export error:', error);
+    } catch {
       toast.error(`Failed to export as ${format.toUpperCase()}`);
     } finally {
       setIsExporting(false);
@@ -44,46 +47,43 @@ export function ExportButton({ resumeData, format, className }: ExportButtonProp
 
   const exportAsJSON = () => {
     const jsonData = JSON.stringify(resumeData, null, 2);
-    const blob = new Blob([jsonData], { type: 'application/json' });
+    const blob = new Blob([jsonData], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `${resumeData.personalInfo?.name || 'resume'}.json`;
+    link.download = `${resumeData.personalInfo?.name || "resume"}.json`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success("Resume exported as JSON!");
   };
 
   const exportAsPNG = async () => {
-
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
     canvas.width = 800;
     canvas.height = 1000;
-    
-    if (ctx) {
 
-      ctx.fillStyle = '#ffffff';
+    if (ctx) {
+      ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 32px Arial';
-      ctx.fillText(resumeData.personalInfo?.name || 'Your Name', 50, 100);
-      
-      ctx.font = '14px Arial';
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 32px Arial";
+      ctx.fillText(resumeData.personalInfo?.name || "Your Name", 50, 100);
+
+      ctx.font = "14px Arial";
       ctx.fillText(
-        `${resumeData.personalInfo?.email || ''} | ${resumeData.personalInfo?.phone || ''}`,
+        `${resumeData.personalInfo?.email || ""} | ${resumeData.personalInfo?.phone || ""}`,
         50,
-        140
+        140,
       );
 
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
+          const link = document.createElement("a");
           link.href = url;
-          link.download = `${resumeData.personalInfo?.name || 'resume'}.png`;
+          link.download = `${resumeData.personalInfo?.name || "resume"}.png`;
           link.click();
           URL.revokeObjectURL(url);
           toast.success("Resume exported as PNG!");
@@ -93,49 +93,65 @@ export function ExportButton({ resumeData, format, className }: ExportButtonProp
   };
 
   const exportAsPDF = async () => {
-
-
-    const { jsPDF } = await import('jspdf');
+    const { jsPDF } = await import("jspdf");
     const doc = new jsPDF();
 
     doc.setFontSize(20);
-    doc.text(resumeData.personalInfo?.name || 'Your Name', 20, 30);
-    
+    doc.text(resumeData.personalInfo?.name || "Your Name", 20, 30);
+
     doc.setFontSize(12);
-    doc.text(`${resumeData.personalInfo?.email || ''} | ${resumeData.personalInfo?.phone || ''}`, 20, 45);
-    
+    doc.text(
+      `${resumeData.personalInfo?.email || ""} | ${resumeData.personalInfo?.phone || ""}`,
+      20,
+      45,
+    );
+
     if (resumeData.summary) {
-      doc.text('Professional Summary:', 20, 65);
+      doc.text("Professional Summary:", 20, 65);
       doc.setFontSize(10);
       const splitSummary = doc.splitTextToSize(resumeData.summary, 170);
       doc.text(splitSummary, 20, 75);
     }
 
-    doc.save(`${resumeData.personalInfo?.name || 'resume'}.pdf`);
+    doc.save(`${resumeData.personalInfo?.name || "resume"}.pdf`);
     toast.success("Resume exported as PDF!");
   };
 
   const exportAsDOCX = async () => {
-
-
     const rtfContent = createRTFContent(resumeData);
-    const blob = new Blob([rtfContent], { type: 'application/rtf' });
+    const blob = new Blob([rtfContent], { type: "application/rtf" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `${resumeData.personalInfo?.name || 'resume'}.rtf`;
+    link.download = `${resumeData.personalInfo?.name || "resume"}.rtf`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success("Resume exported as RTF (DOCX compatible)!");
   };
 
   const createRTFContent = (data: any): string => {
-    const name = (data.personalInfo?.name || 'Your Name').replace(/[\{\}\\\\]/g, '\\\\$&');
-    const email = (data.personalInfo?.email || '').replace(/[\{\}\\\\]/g, '\\\\$&');
-    const phone = (data.personalInfo?.phone || '').replace(/[\{\}\\\\]/g, '\\\\$&');
-    const summary = (data.summary || 'Professional summary here.').replace(/[\{\}\\\\]/g, '\\\\$&');
-    const experience = (data.experience?.[0]?.description || 'Experience details here.').replace(/[\{\}\\\\]/g, '\\\\$&');
-    const education = (data.education?.[0]?.details || 'Education details here.').replace(/[\{\}\\\\]/g, '\\\\$&');
+    const name = (data.personalInfo?.name || "Your Name").replace(
+      /[\{\}\\\\]/g,
+      "\\\\$&",
+    );
+    const email = (data.personalInfo?.email || "").replace(
+      /[\{\}\\\\]/g,
+      "\\\\$&",
+    );
+    const phone = (data.personalInfo?.phone || "").replace(
+      /[\{\}\\\\]/g,
+      "\\\\$&",
+    );
+    const summary = (data.summary || "Professional summary here.").replace(
+      /[\{\}\\\\]/g,
+      "\\\\$&",
+    );
+    const experience = (
+      data.experience?.[0]?.description || "Experience details here."
+    ).replace(/[\{\}\\\\]/g, "\\\\$&");
+    const education = (
+      data.education?.[0]?.details || "Education details here."
+    ).replace(/[\{\}\\\\]/g, "\\\\$&");
 
     return `{\\rtf1\\ansi\\deff0
 {\\fonttbl{\\f0\\fnil\\fcharset0 Arial;}}
@@ -155,10 +171,10 @@ export function ExportButton({ resumeData, format, className }: ExportButtonProp
   };
 
   const formatLabels = {
-    pdf: 'PDF',
-    docx: 'DOCX',
-    json: 'JSON',
-    png: 'PNG',
+    pdf: "PDF",
+    docx: "DOCX",
+    json: "JSON",
+    png: "PNG",
   };
 
   return (
