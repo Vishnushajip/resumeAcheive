@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
-import { Button } from "@/components/ui/Button";
 import {
   FileText,
   LogOut,
@@ -22,7 +21,7 @@ export function AppBar() {
   const { isAuthenticated, logout } = useAuthStore();
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    const handleScroll = () => setIsScrolled(window.scrollY > 16);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -49,417 +48,428 @@ export function AppBar() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
 
-        .appbar-root {
+        .ab-root {
           position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
+          top: 0; left: 0; right: 0;
           z-index: 9999;
-          font-family: 'DM Sans', sans-serif;
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          font-family: 'Manrope', sans-serif;
+          padding: 10px 16px 0;
+          transition: padding 0.35s cubic-bezier(0.16,1,0.3,1);
         }
 
-        .appbar-root.scrolled {
-          padding: 0;
+        .ab-root.scrolled {
+          padding: 8px 20px 0;
         }
 
-        .appbar-root.scrolled .appbar-inner {
-          background: rgba(8, 8, 12, 0.92);
-          backdrop-filter: blur(24px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-          box-shadow: 0 4px 32px rgba(0, 0, 0, 0.4);
-        }
-
-        .appbar-inner {
-          background: rgba(8, 8, 12, 0.75);
-          backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .appbar-container {
+        .ab-pill {
+          background: #ffffff;
+          border: 1.5px solid rgba(108,99,255,0.13);
+          border-radius: 20px;
+          box-shadow: 0 2px 16px rgba(108,99,255,0.07), 0 1px 4px rgba(0,0,0,0.04);
+          overflow: hidden;
+          transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
           max-width: 1280px;
           margin: 0 auto;
-          padding: 0 24px;
-          height: 64px;
+        }
+
+        .ab-root.scrolled .ab-pill {
+          border-radius: 16px;
+          box-shadow: 0 8px 32px rgba(108,99,255,0.11), 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .ab-bar {
+          height: 58px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 16px;
+          padding: 0 8px 0 20px;
+          gap: 8px;
         }
 
-        .logo-wrap {
+        .ab-logo {
           display: flex;
           align-items: center;
+          gap: 9px;
           text-decoration: none;
-          gap: 0;
           flex-shrink: 0;
         }
 
-        .logo-text {
+        .ab-logo-icon {
+          width: 33px;
+          height: 33px;
+          background: linear-gradient(135deg, #6C63FF 0%, #9D95FF 100%);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 4px 12px rgba(108,99,255,0.28);
+          transition: transform 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .ab-logo:hover .ab-logo-icon {
+          transform: scale(1.07) rotate(-4deg);
+          box-shadow: 0 6px 20px rgba(108,99,255,0.38);
+        }
+
+        .ab-logo-icon svg {
+          width: 16px; height: 16px;
+          color: #fff;
+          stroke-width: 2.5;
+        }
+
+        .ab-logo-text {
           font-family: 'Syne', sans-serif;
           font-weight: 800;
-          font-size: 20px;
+          font-size: 17px;
           letter-spacing: -0.5px;
-          line-height: 1;
+          color: #0f0f1a;
+          transition: color 0.18s ease;
         }
 
-        .logo-main {
-          color: #ffffff;
-        }
-
-        .logo-dot-com {
+        .ab-logo-accent {
           color: #6C63FF;
         }
 
-        .logo-wrap:hover .logo-main {
-          opacity: 0.85;
+        .ab-logo:hover .ab-logo-text {
+          color: #6C63FF;
         }
 
-        .logo-wrap:hover .logo-dot-com {
-          color: #9D95FF;
-        }
-
-        .logo-main, .logo-dot-com {
-          transition: all 0.2s ease;
-        }
-
-        .nav-desktop {
+        .ab-nav {
           display: none;
           align-items: center;
           gap: 2px;
+          flex: 1;
+          justify-content: center;
         }
 
         @media (min-width: 768px) {
-          .nav-desktop { display: flex; }
-          .mobile-toggle { display: none !important; }
-          .actions-desktop { display: flex !important; }
+          .ab-nav { display: flex; }
+          .ab-mobile-toggle { display: none !important; }
+          .ab-actions { display: flex !important; }
         }
 
-        .nav-link {
+        .ab-nav-link {
           position: relative;
-          padding: 8px 16px;
+          padding: 7px 14px;
           font-size: 14px;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.55);
+          font-weight: 600;
+          color: #52525b;
           text-decoration: none;
-          border-radius: 8px;
-          transition: all 0.2s ease;
+          border-radius: 10px;
+          transition: all 0.18s ease;
           display: flex;
           align-items: center;
           gap: 6px;
           letter-spacing: 0.01em;
+          white-space: nowrap;
         }
 
-        .nav-link:hover {
-          color: rgba(255, 255, 255, 0.95);
-          background: rgba(255, 255, 255, 0.07);
+        .ab-nav-link svg {
+          width: 14px; height: 14px;
+          flex-shrink: 0;
         }
 
-        .nav-link.active {
-          color: #ffffff;
-          background: rgba(108, 99, 255, 0.15);
+        .ab-nav-link:hover {
+          color: #6C63FF;
+          background: rgba(108,99,255,0.08);
         }
 
-        .nav-link.active::after {
+        .ab-nav-link.active {
+          color: #6C63FF;
+          background: rgba(108,99,255,0.09);
+          font-weight: 700;
+        }
+
+        .ab-nav-link.active::after {
           content: '';
           position: absolute;
-          bottom: 4px;
+          bottom: 5px;
           left: 50%;
           transform: translateX(-50%);
-          width: 16px;
+          width: 14px;
           height: 2px;
           background: #6C63FF;
-          border-radius: 1px;
+          border-radius: 2px;
         }
 
-        .nav-link svg {
-          width: 15px;
-          height: 15px;
-          opacity: 0.7;
-        }
-
-        .nav-divider {
+        .ab-divider {
           width: 1px;
-          height: 20px;
-          background: rgba(255, 255, 255, 0.1);
-          margin: 0 8px;
+          height: 18px;
+          background: rgba(108,99,255,0.13);
+          margin: 0 6px;
+          flex-shrink: 0;
         }
 
-        .actions-desktop {
+        .ab-actions {
           display: none;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
+          flex-shrink: 0;
         }
 
-        .btn-ghost {
-          padding: 8px 16px;
-          font-family: 'DM Sans', sans-serif;
+        .ab-btn-ghost {
+          padding: 8px 15px;
+          font-family: 'Manrope', sans-serif;
           font-size: 14px;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.6);
+          font-weight: 600;
+          color: #52525b;
           background: transparent;
           border: none;
-          border-radius: 8px;
+          border-radius: 10px;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.18s ease;
+          white-space: nowrap;
           letter-spacing: 0.01em;
         }
 
-        .btn-ghost:hover {
-          color: #ffffff;
-          background: rgba(255, 255, 255, 0.07);
+        .ab-btn-ghost:hover {
+          color: #6C63FF;
+          background: rgba(108,99,255,0.08);
         }
 
-        .btn-primary {
-          padding: 9px 20px;
-          font-family: 'DM Sans', sans-serif;
+        .ab-btn-primary {
+          padding: 9px 18px;
+          font-family: 'Manrope', sans-serif;
           font-size: 14px;
-          font-weight: 600;
+          font-weight: 700;
           color: #ffffff;
           background: #6C63FF;
           border: none;
-          border-radius: 9px;
+          border-radius: 12px;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 7px;
-          transition: all 0.25s ease;
+          transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
           letter-spacing: 0.01em;
-          box-shadow: 0 0 0 0 rgba(108, 99, 255, 0.4);
+          white-space: nowrap;
+          box-shadow: 0 3px 12px rgba(108,99,255,0.28);
         }
 
-        .btn-primary:hover {
-          background: #7B74FF;
+        .ab-btn-primary:hover {
+          background: #8B85FF;
           transform: translateY(-1px);
-          box-shadow: 0 8px 24px rgba(108, 99, 255, 0.35);
+          box-shadow: 0 7px 22px rgba(108,99,255,0.36);
         }
 
-        .btn-primary:active {
+        .ab-btn-primary:active {
           transform: translateY(0);
         }
 
-        .btn-primary svg {
-          width: 15px;
-          height: 15px;
-        }
+        .ab-btn-primary svg { width: 14px; height: 14px; }
 
-        .btn-logout {
-          padding: 8px 16px;
-          font-family: 'DM Sans', sans-serif;
+        .ab-btn-logout {
+          padding: 8px 14px;
+          font-family: 'Manrope', sans-serif;
           font-size: 14px;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.5);
+          font-weight: 600;
+          color: #a1a1aa;
           background: transparent;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
+          border: 1px solid #e4e4e7;
+          border-radius: 10px;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 7px;
-          transition: all 0.2s ease;
+          transition: all 0.18s ease;
+          white-space: nowrap;
         }
 
-        .btn-logout:hover {
-          color: #FF6B6B;
-          background: rgba(255, 107, 107, 0.08);
-          border-color: rgba(255, 107, 107, 0.25);
+        .ab-btn-logout svg { width: 14px; height: 14px; }
+
+        .ab-btn-logout:hover {
+          color: #ef4444;
+          background: #fef2f2;
+          border-color: #fca5a5;
         }
 
-        .btn-logout svg {
-          width: 15px;
-          height: 15px;
-        }
-
-        .mobile-toggle {
+        .ab-mobile-toggle {
           display: flex;
           align-items: center;
           justify-content: center;
           width: 38px;
           height: 38px;
-          border-radius: 9px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-          color: rgba(255, 255, 255, 0.7);
+          border-radius: 11px;
+          border: 1.5px solid #e4e4e7;
+          background: transparent;
+          color: #52525b;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.18s ease;
+          flex-shrink: 0;
         }
 
-        .mobile-toggle:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: #ffffff;
+        .ab-mobile-toggle:hover {
+          background: rgba(108,99,255,0.08);
+          border-color: rgba(108,99,255,0.2);
+          color: #6C63FF;
         }
 
-        .mobile-toggle svg {
-          width: 18px;
-          height: 18px;
-        }
+        .ab-mobile-toggle svg { width: 18px; height: 18px; }
 
-        .mobile-menu {
+        .ab-mobile-menu {
           overflow: hidden;
-          transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+          max-height: 0;
+          opacity: 0;
+          transition: max-height 0.38s cubic-bezier(0.16,1,0.3,1), opacity 0.22s ease;
         }
 
-        .mobile-menu.open {
-          max-height: 600px;
+        .ab-mobile-menu.open {
+          max-height: 560px;
           opacity: 1;
         }
 
-        .mobile-menu.closed {
-          max-height: 0;
-          opacity: 0;
-        }
-
-        .mobile-menu-inner {
-          padding: 12px 20px 20px;
-          border-top: 1px solid rgba(255, 255, 255, 0.06);
-          background: rgba(8, 8, 14, 0.98);
+        .ab-mobile-inner {
+          padding: 8px 10px 16px;
+          border-top: 1.5px solid #f4f4f5;
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 2px;
         }
 
-        .mobile-nav-link {
+        .ab-mobile-link {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 12px 14px;
+          padding: 11px 14px;
           font-size: 15px;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.55);
+          font-weight: 600;
+          color: #52525b;
           text-decoration: none;
-          border-radius: 10px;
-          transition: all 0.2s ease;
+          border-radius: 12px;
+          transition: all 0.18s ease;
+          letter-spacing: 0.01em;
         }
 
-        .mobile-nav-link:hover {
-          color: #ffffff;
-          background: rgba(255, 255, 255, 0.06);
+        .ab-mobile-link svg {
+          width: 16px; height: 16px;
+          flex-shrink: 0;
         }
 
-        .mobile-nav-link.active {
-          color: #ffffff;
-          background: rgba(108, 99, 255, 0.15);
+        .ab-mobile-link:hover {
+          color: #6C63FF;
+          background: rgba(108,99,255,0.08);
         }
 
-        .mobile-nav-link svg {
-          width: 16px;
-          height: 16px;
-          opacity: 0.7;
+        .ab-mobile-link.active {
+          color: #6C63FF;
+          background: rgba(108,99,255,0.09);
+          font-weight: 700;
         }
 
-        .mobile-divider {
-          height: 1px;
-          background: rgba(255, 255, 255, 0.06);
-          margin: 8px 0;
+        .ab-mobile-divider {
+          height: 1.5px;
+          background: #f4f4f5;
+          margin: 8px 0 10px;
         }
 
-        .mobile-actions {
+        .ab-mobile-actions {
           display: flex;
           flex-direction: column;
           gap: 8px;
-          padding-top: 4px;
         }
 
-        .btn-mobile-primary {
+        .ab-mobile-btn-primary {
           padding: 13px 20px;
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 15px;
-          font-weight: 600;
+          font-weight: 700;
           color: #ffffff;
           background: #6C63FF;
           border: none;
-          border-radius: 10px;
+          border-radius: 13px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          transition: all 0.2s ease;
           width: 100%;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 14px rgba(108,99,255,0.26);
+          letter-spacing: 0.01em;
         }
 
-        .btn-mobile-primary:hover {
-          background: #7B74FF;
-        }
+        .ab-mobile-btn-primary:hover { background: #8B85FF; }
 
-        .btn-mobile-outline {
+        .ab-mobile-btn-outline {
           padding: 12px 20px;
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 15px;
-          font-weight: 500;
-          color: rgba(255, 255, 255, 0.65);
+          font-weight: 600;
+          color: #52525b;
           background: transparent;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 10px;
+          border: 1.5px solid #e4e4e7;
+          border-radius: 13px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          transition: all 0.2s ease;
           width: 100%;
+          transition: all 0.18s ease;
+          letter-spacing: 0.01em;
         }
 
-        .btn-mobile-outline:hover {
-          background: rgba(255, 255, 255, 0.06);
-          color: #ffffff;
+        .ab-mobile-btn-outline:hover {
+          color: #6C63FF;
+          border-color: #6C63FF;
+          background: rgba(108,99,255,0.06);
         }
 
-        .btn-mobile-logout {
+        .ab-mobile-btn-logout {
           padding: 12px 20px;
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 15px;
-          font-weight: 500;
-          color: rgba(255, 107, 107, 0.8);
-          background: rgba(255, 107, 107, 0.06);
-          border: 1px solid rgba(255, 107, 107, 0.15);
-          border-radius: 10px;
+          font-weight: 600;
+          color: #ef4444;
+          background: #fef2f2;
+          border: 1.5px solid #fca5a5;
+          border-radius: 13px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 8px;
-          transition: all 0.2s ease;
           width: 100%;
+          transition: all 0.18s ease;
+          letter-spacing: 0.01em;
         }
 
-        .btn-mobile-logout:hover {
-          background: rgba(255, 107, 107, 0.12);
-          color: #FF6B6B;
-        }
+        .ab-mobile-btn-logout:hover { background: #fee2e2; }
       `}</style>
 
-      <header className={`appbar-root ${isScrolled ? "scrolled" : ""}`}>
-        <div className="appbar-inner">
-          <div className="appbar-container">
-            <Link href="/" className="logo-wrap">
-              <span className="logo-text">
-                <span className="logo-main">resumeachieve</span>
-                <span className="logo-dot-com">.com</span>
+      <header className={`ab-root ${isScrolled ? "scrolled" : ""}`}>
+        <div className="ab-pill">
+          <div className="ab-bar">
+            <Link href="/" className="ab-logo">
+              <div className="ab-logo-icon">
+                <FileText />
+              </div>
+              <span className="ab-logo-text">
+                resume<span className="ab-logo-accent">achieve</span>
               </span>
             </Link>
 
-            <nav className="nav-desktop">
+            <nav className="ab-nav">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`nav-link ${pathname === item.href ? "active" : ""}`}
+                  className={`ab-nav-link ${pathname === item.href ? "active" : ""}`}
                 >
                   {item.label}
                 </Link>
               ))}
 
-              {authItems.length > 0 && <div className="nav-divider" />}
+              {authItems.length > 0 && <div className="ab-divider" />}
 
               {authItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`nav-link ${pathname === item.href ? "active" : ""}`}
+                  className={`ab-nav-link ${pathname === item.href ? "active" : ""}`}
                 >
                   <item.icon />
                   {item.label}
@@ -467,22 +477,22 @@ export function AppBar() {
               ))}
             </nav>
 
-            <div className="actions-desktop">
+            <div className="ab-actions">
               {isAuthenticated ? (
-                <button className="btn-logout" onClick={handleLogout}>
+                <button className="ab-btn-logout" onClick={handleLogout}>
                   <LogOut />
                   Log out
                 </button>
               ) : (
                 <>
                   <button
-                    className="btn-ghost"
+                    className="ab-btn-ghost"
                     onClick={() => router.push("/login")}
                   >
                     Sign In
                   </button>
                   <button
-                    className="btn-primary"
+                    className="ab-btn-primary"
                     onClick={() => router.push("/login")}
                   >
                     <Sparkles />
@@ -493,7 +503,7 @@ export function AppBar() {
             </div>
 
             <button
-              className="mobile-toggle"
+              className="ab-mobile-toggle"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -501,15 +511,13 @@ export function AppBar() {
             </button>
           </div>
 
-          <div
-            className={`mobile-menu ${isMobileMenuOpen ? "open" : "closed"}`}
-          >
-            <div className="mobile-menu-inner">
+          <div className={`ab-mobile-menu ${isMobileMenuOpen ? "open" : ""}`}>
+            <div className="ab-mobile-inner">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`mobile-nav-link ${pathname === item.href ? "active" : ""}`}
+                  className={`ab-mobile-link ${pathname === item.href ? "active" : ""}`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.label}
@@ -520,7 +528,7 @@ export function AppBar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`mobile-nav-link ${pathname === item.href ? "active" : ""}`}
+                  className={`ab-mobile-link ${pathname === item.href ? "active" : ""}`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <item.icon />
@@ -528,18 +536,21 @@ export function AppBar() {
                 </Link>
               ))}
 
-              <div className="mobile-divider" />
+              <div className="ab-mobile-divider" />
 
-              <div className="mobile-actions">
+              <div className="ab-mobile-actions">
                 {isAuthenticated ? (
-                  <button className="btn-mobile-logout" onClick={handleLogout}>
+                  <button
+                    className="ab-mobile-btn-logout"
+                    onClick={handleLogout}
+                  >
                     <LogOut size={16} />
                     Log out
                   </button>
                 ) : (
                   <>
                     <button
-                      className="btn-mobile-outline"
+                      className="ab-mobile-btn-outline"
                       onClick={() => {
                         router.push("/login");
                         setIsMobileMenuOpen(false);
@@ -548,14 +559,14 @@ export function AppBar() {
                       Sign In
                     </button>
                     <button
-                      className="btn-mobile-primary"
+                      className="ab-mobile-btn-primary"
                       onClick={() => {
                         router.push("/login");
                         setIsMobileMenuOpen(false);
                       }}
                     >
                       <Sparkles size={16} />
-                      Get Started
+                      Get Started Free
                     </button>
                   </>
                 )}

@@ -203,7 +203,7 @@ export default function UploadPage() {
                   Drop your CV here
                 </p>
                 <p className="text-zinc-500 font-medium text-lg italic">
-                  Supports HD Images (PNG, JPG) and PDF Documents
+                  Supports HD Images (PNG, JPG)
                 </p>
               </div>
               <Button

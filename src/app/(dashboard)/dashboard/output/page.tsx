@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   ZoomOut,
   Save,
   Sparkles,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -106,6 +107,7 @@ export default function OutputPage() {
   const { resumeData, atsData } = useEditorStore();
   const { user } = useAuthStore();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const cvId = searchParams.get("id");
 
   const [localResumeData, setLocalResumeData] = useState<ResumeData | null>(
@@ -124,6 +126,13 @@ export default function OutputPage() {
     text: "",
     section: "",
   });
+  const [floatingToolbar, setFloatingToolbar] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+  }>({ visible: false, x: 0, y: 0 });
+  const [showTutorial, setShowTutorial] = useState(true);
+  const [mobileScale, setMobileScale] = useState(0.45);
 
   const {
     state: editorState,
@@ -183,9 +192,25 @@ export default function OutputPage() {
         setSelectedText(selection.toString());
         const element = selection.anchorNode?.parentElement as HTMLElement;
         setSelectedElement(element);
+
+        // Show floating toolbar near selection
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        // Calculate center but keep within viewport bounds (with padding)
+        let centerX = rect.left + rect.width / 2;
+        centerX = Math.max(100, Math.min(viewportWidth - 100, centerX));
+        setFloatingToolbar({
+          visible: true,
+          x: centerX,
+          y: rect.top - 50,
+        });
+        // Hide tutorial once user starts selecting text
+        setShowTutorial(false);
       } else {
         setSelectedText("");
         setSelectedElement(null);
+        setFloatingToolbar((prev) => ({ ...prev, visible: false }));
       }
     };
 
@@ -194,24 +219,94 @@ export default function OutputPage() {
       document.removeEventListener("selectionchange", handleSelection);
   }, []);
 
+  // Handle click outside to hide toolbar
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-floating-toolbar]")) {
+        setFloatingToolbar((prev) => ({ ...prev, visible: false }));
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Prevent default context menu on resume content and show custom toolbar
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Only prevent if clicking inside the resume editor
+      if (target.closest("[data-resume-content]") && selectedText) {
+        e.preventDefault();
+        // Show toolbar at mouse position
+        setFloatingToolbar({
+          visible: true,
+          x: e.clientX,
+          y: e.clientY - 50,
+        });
+      }
+    };
+    document.addEventListener("contextmenu", handleContextMenu);
+    return () => document.removeEventListener("contextmenu", handleContextMenu);
+  }, [selectedText]);
+
   const handleSave = async () => {
-    if (!cvId || !resumeRef.current) return;
+    console.log(
+      "Save clicked - cvId:",
+      cvId,
+      "has resumeRef:",
+      !!resumeRef.current,
+      "has localResumeData:",
+      !!localResumeData,
+    );
+
+    if (!resumeRef.current) {
+      toast.error("Resume not loaded");
+      return;
+    }
+    if (!localResumeData) {
+      toast.error("Resume data not loaded");
+      return;
+    }
 
     setIsSaving(true);
     try {
       // Extract updated data from the editable resume
       const updatedData = extractResumeDataFromDOM(resumeRef.current);
+      console.log("Extracted data:", updatedData);
 
-      await cvService.updateCV(cvId, {
+      // Prepare data according to backend API structure
+      const saveData = {
+        title:
+          updatedData.personalInfo?.fullName ||
+          localResumeData.personalInfo?.fullName ||
+          "My Resume",
         cvData: {
           ...localResumeData,
           ...updatedData,
-          templateId: editorState.currentTemplate,
-          lastEdited: new Date().toISOString(),
         },
-      });
-      toast.success("Resume saved successfully!");
-    } catch {
+        templateId: editorState.currentTemplate,
+        isActive: true,
+      };
+      console.log("Saving data:", saveData);
+
+      let result;
+      if (cvId) {
+        // Update existing CV
+        result = await cvService.updateCV(cvId, saveData);
+        toast.success("Resume updated successfully!");
+      } else {
+        // Create new CV
+        result = await cvService.createCV(saveData);
+        toast.success("New resume created successfully!");
+        // Update URL with new CV ID
+        if (result?.id) {
+          router.push(`/dashboard/output?id=${result.id}`);
+        }
+      }
+      console.log("Save result:", result);
+    } catch (error) {
+      console.error("Save error:", error);
       toast.error("Failed to save resume");
     } finally {
       setIsSaving(false);
@@ -425,11 +520,12 @@ export default function OutputPage() {
                 </button>
               </div>
 
-              {/* Zoom Controls */}
+              {/* Zoom Controls - Desktop */}
               <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
                 <button
-                  onClick={() => setZoom(editorState.zoom - 10)}
+                  onClick={() => setZoom(Math.max(50, editorState.zoom - 10))}
                   className="p-2 rounded-md hover:bg-white transition-colors"
+                  title="Zoom Out"
                 >
                   <ZoomOut className="h-4 w-4" />
                 </button>
@@ -437,12 +533,74 @@ export default function OutputPage() {
                   {editorState.zoom}%
                 </span>
                 <button
-                  onClick={() => setZoom(editorState.zoom + 10)}
+                  onClick={() => setZoom(Math.min(150, editorState.zoom + 10))}
                   className="p-2 rounded-md hover:bg-white transition-colors"
+                  title="Zoom In"
                 >
                   <ZoomIn className="h-4 w-4" />
                 </button>
+                <button
+                  onClick={() => setZoom(100)}
+                  className="p-2 rounded-md hover:bg-white transition-colors text-xs font-medium"
+                  title="Reset Zoom"
+                >
+                  100%
+                </button>
+                <button
+                  onClick={() => {
+                    // Fit to screen - calculate scale based on container width
+                    const containerWidth = window.innerWidth - 400; // Account for sidebars
+                    const scale = Math.min(
+                      100,
+                      Math.floor((containerWidth / 794) * 100),
+                    );
+                    setZoom(Math.max(50, scale));
+                  }}
+                  className="p-2 rounded-md hover:bg-white transition-colors text-xs font-medium"
+                  title="Fit to Screen"
+                >
+                  Fit
+                </button>
               </div>
+
+              {/* Zoom Controls - Mobile */}
+              {viewMode === "mobile" && (
+                <div className="flex sm:hidden items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() =>
+                      setMobileScale(Math.max(0.25, mobileScale - 0.05))
+                    }
+                    className="p-2 rounded-md hover:bg-white transition-colors"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </button>
+                  <span className="px-2 text-sm font-medium min-w-[3rem] text-center">
+                    {Math.round(mobileScale * 100)}%
+                  </span>
+                  <button
+                    onClick={() =>
+                      setMobileScale(Math.min(1.0, mobileScale + 0.05))
+                    }
+                    className="p-2 rounded-md hover:bg-white transition-colors"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Fit to screen - calculate scale based on mobile screen width
+                      const screenWidth = window.innerWidth - 32;
+                      const scale = Math.min(0.8, screenWidth / 794);
+                      setMobileScale(Math.max(0.25, scale));
+                    }}
+                    className="px-2 py-1.5 rounded-md hover:bg-white transition-colors text-xs font-medium"
+                    title="Fit to Screen"
+                  >
+                    Fit
+                  </button>
+                </div>
+              )}
 
               {/* Template Button */}
               <Button
@@ -472,7 +630,6 @@ export default function OutputPage() {
                 )}
               </Button>
 
-              {/* Export Button */}
               <div className="relative">
                 <Button
                   size="sm"
@@ -483,17 +640,24 @@ export default function OutputPage() {
                   Export
                 </Button>
                 {showExportMenu && (
-                  <div className="absolute right-0 top-full mt-2 z-50">
-                    <ExportMenu
-                      resumeRef={resumeRef as React.RefObject<HTMLDivElement>}
-                      fileName={resume.personalInfo?.fullName || "Resume"}
-                      resumeData={resume}
-                    />
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    onMouseDown={(e) => {
+                      if (e.target === e.currentTarget)
+                        setShowExportMenu(false);
+                    }}
+                  >
+                    <div className="w-[340px]">
+                      <ExportMenu
+                        resumeRef={resumeRef as React.RefObject<HTMLDivElement>}
+                        fileName={resume.personalInfo?.fullName || "Resume"}
+                        resumeData={resume}
+                        onClose={() => setShowExportMenu(false)}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Mobile Edit Button */}
               <Button
                 size="sm"
                 variant="outline"
@@ -528,26 +692,54 @@ export default function OutputPage() {
           </div>
 
           {/* Center - Resume Preview */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-x-auto">
             <div
-              className="mx-auto bg-white shadow-xl transition-all duration-300 overflow-hidden"
+              className="mx-auto bg-white shadow-xl transition-all duration-300"
               style={{
-                width: viewMode === "mobile" ? "375px" : "794px",
-                minHeight: viewMode === "mobile" ? "667px" : "1123px",
-                maxWidth: "100%",
-                transform: `scale(${editorState.zoom / 100})`,
+                width: "794px", // Fixed A4 width
+                minHeight: "1123px", // Fixed A4 height
+                maxWidth: "none",
+                transform: `scale(${viewMode === "mobile" ? mobileScale : editorState.zoom / 100})`,
                 transformOrigin: "top center",
               }}
             >
               <div
                 ref={resumeRef}
-                className="w-full h-full p-8 sm:p-10"
+                data-resume-content
+                className="w-full h-full p-8 sm:p-10 relative"
                 style={{
                   fontFamily: templateConfig.fonts.body,
                   color: templateConfig.colors.text,
                   background: templateConfig.colors.background,
                 }}
               >
+                {/* Tutorial Tooltip */}
+                {showTutorial && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 animate-in fade-in slide-in-from-top-2 duration-500">
+                    <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-xl shadow-xl shadow-purple-500/30 max-w-xs">
+                      <div className="flex items-start gap-3">
+                        <Sparkles className="h-5 w-5 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-semibold text-sm">
+                            Pro Tip: AI Enhancement
+                          </p>
+                          <p className="text-xs text-white/90 mt-1">
+                            Select any text and click "Ask AI" to improve it
+                            instantly!
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowTutorial(false)}
+                          className="text-white/70 hover:text-white transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      {/* Arrow pointing down */}
+                      <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-blue-600 transform rotate-45" />
+                    </div>
+                  </div>
+                )}
                 {/* Header */}
                 <header
                   className="mb-6"
@@ -571,7 +763,7 @@ export default function OutputPage() {
                   }}
                 >
                   <h1
-                    className="text-3xl font-bold mb-1"
+                    className="text-2xl font-bold mb-1"
                     contentEditable
                     suppressContentEditableWarning
                     style={{
@@ -585,7 +777,7 @@ export default function OutputPage() {
                     {resume.personalInfo?.fullName}
                   </h1>
                   <p
-                    className="text-lg mb-2"
+                    className="text-base mb-2"
                     contentEditable
                     suppressContentEditableWarning
                     style={{
@@ -927,6 +1119,52 @@ export default function OutputPage() {
           </div>
         </div>
       </main>
+
+      {/* Floating AI Toolbar - appears when text is selected */}
+      {floatingToolbar.visible && selectedText && (
+        <div
+          data-floating-toolbar
+          className="fixed z-50 animate-in fade-in zoom-in duration-200"
+          style={{
+            left: `${Math.max(80, Math.min(window.innerWidth - 80, floatingToolbar.x))}px`,
+            top: `${Math.max(10, floatingToolbar.y)}px`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          <div className="flex items-center gap-1 bg-gray-900 text-white rounded-lg shadow-xl shadow-black/30 p-1.5 border border-gray-700 whitespace-nowrap">
+            <button
+              onClick={handleOpenAI}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-md text-sm font-medium hover:from-purple-500 hover:to-blue-500 transition-all"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Ask AI
+            </button>
+            <div className="w-px h-5 bg-gray-700 mx-1" />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(selectedText);
+                toast.success("Copied!");
+              }}
+              className="px-2 py-1.5 text-xs hover:bg-gray-800 rounded transition-colors"
+            >
+              Copy
+            </button>
+            <button
+              onClick={() => {
+                const selection = window.getSelection();
+                selection?.selectAllChildren(
+                  selection.anchorNode?.parentElement || document.body,
+                );
+              }}
+              className="px-2 py-1.5 text-xs hover:bg-gray-800 rounded transition-colors"
+            >
+              Select All
+            </button>
+          </div>
+          {/* Arrow pointing down */}
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-gray-900 border-r border-b border-gray-700 transform rotate-45" />
+        </div>
+      )}
 
       {/* Mobile Toolbox */}
       <MobileToolbox

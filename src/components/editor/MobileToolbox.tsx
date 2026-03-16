@@ -104,21 +104,22 @@ export function MobileToolbox({
           </button>
         </div>
 
-        {/* AI Button */}
-        {hasSelection && (
-          <div className="px-4 py-2 border-b">
-            <button
-              onClick={() => {
-                onClose();
-                onOpenAI();
-              }}
-              className="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl"
-            >
-              <Sparkles className="h-4 w-4" />
-              Ask AI to Improve
-            </button>
-          </div>
-        )}
+        {/* AI Button - Always visible on mobile */}
+        <div className="px-4 py-3 border-b bg-gradient-to-r from-purple-50 to-blue-50">
+          <button
+            onClick={() => {
+              onClose();
+              onOpenAI();
+            }}
+            className="w-full flex items-center justify-center gap-2 p-3.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg shadow-purple-500/30 active:scale-95 transition-all"
+          >
+            <Sparkles className="h-5 w-5" />
+            <span className="font-semibold">Ask AI to Improve</span>
+          </button>
+          <p className="text-center text-xs text-gray-500 mt-2">
+            Select text first, then tap to enhance with AI
+          </p>
+        </div>
 
         {/* Tabs */}
         <div className="flex border-b overflow-x-auto">

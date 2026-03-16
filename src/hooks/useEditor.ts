@@ -33,8 +33,8 @@ export function useEditor() {
   const [state, setState] = useState<EditorState>({
     selectedElement: null,
     selectedText: "",
-    currentTemplate: "classic",
-    zoom: 100,
+    currentTemplate: "ats-clean",
+    zoom: 50,
     isMobile: false,
     showToolbox: false,
     showAiModal: false,
