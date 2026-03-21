@@ -165,13 +165,21 @@ export function useEditor() {
 
     resumeRef.current.appendChild(section);
   }, []);
-
   const deleteSelectedElement = useCallback(() => {
-    if (state.selectedElement && state.selectedElement.parentNode) {
+    if (!state.selectedElement) return;
+
+    const section =
+      state.selectedElement.closest("[data-section]") ??
+      state.selectedElement.closest("section");
+
+    if (section && section.parentNode) {
+      section.parentNode.removeChild(section);
+    } else if (state.selectedElement.parentNode) {
       state.selectedElement.parentNode.removeChild(state.selectedElement);
-      setSelectedElement(null);
     }
-  }, [state.selectedElement, setSelectedElement]);
+
+    setSelectedElement(null);
+  }, [state.selectedElement]);
 
   const duplicateElement = useCallback(() => {
     if (state.selectedElement && state.selectedElement.parentNode) {

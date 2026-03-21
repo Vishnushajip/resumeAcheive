@@ -133,17 +133,17 @@ export function AISuggestionModal({
     }
   };
 
-  // FIX: Don't call generateSuggestion() immediately — just reset to options screen
   const handleTryAgain = () => {
     setSuggestion("");
     setHasGenerated(false);
   };
 
   const handleApply = () => {
-    onApply(suggestion);
-    onClose();
-    toast.success("AI suggestion applied!");
-  };
+  const textToApply = suggestion; 
+  onClose(); 
+  onApply(textToApply); 
+  toast.success("Suggestion Applied!");
+};
 
   const isCustom = selectedOption === "custom";
   const canGenerate = !isCustom || customInstruction.trim().length > 0;

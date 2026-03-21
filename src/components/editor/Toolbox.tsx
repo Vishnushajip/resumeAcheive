@@ -30,6 +30,12 @@ interface ToolboxProps {
   onDuplicateElement: () => void;
   onOpenAI: () => void;
   hasSelection: boolean;
+  dividerHeight: number;
+  setDividerHeight: (h: number) => void;
+  dividerColor: string;
+  setDividerColor: (c: string) => void;
+  titleDividerGap: number;
+  setTitleDividerGap: (g: number) => void;
 }
 
 const FONT_FAMILIES = [
@@ -94,8 +100,14 @@ export function Toolbox({
   onDuplicateElement,
   onOpenAI,
   hasSelection,
+  dividerHeight,
+  setDividerHeight,
+  dividerColor,
+  setDividerColor,
+  titleDividerGap,
+  setTitleDividerGap,
 }: ToolboxProps) {
-  const [activeTab, setActiveTab] = React.useState<"text" | "section">("text");
+  const [activeTab, setActiveTab] = React.useState<"text" | "section" | "design">("text");
 
   return (
     <div className="bg-white rounded-xl shadow-lg border w-72 max-h-[calc(100vh-200px)] overflow-y-auto">
@@ -103,29 +115,40 @@ export function Toolbox({
       <div className="flex border-b">
         <button
           onClick={() => setActiveTab("text")}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 py-3 text-xs font-medium transition-colors ${
             activeTab === "text"
               ? "text-blue-600 border-b-2 border-blue-600"
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          <Type className="h-4 w-4 inline mr-1" />
+          <Type className="h-3.5 w-3.5 inline mr-1" />
           Text
         </button>
         <button
+          onClick={() => setActiveTab("design")}
+          className={`flex-1 py-3 text-xs font-medium transition-colors ${
+            activeTab === "design"
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Palette className="h-3.5 w-3.5 inline mr-1" />
+          Design
+        </button>
+        <button
           onClick={() => setActiveTab("section")}
-          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+          className={`flex-1 py-3 text-xs font-medium transition-colors ${
             activeTab === "section"
               ? "text-blue-600 border-b-2 border-blue-600"
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          <Plus className="h-4 w-4 inline mr-1" />
+          <Plus className="h-3.5 w-3.5 inline mr-1" />
           Sections
         </button>
       </div>
 
-      {activeTab === "text" ? (
+      {activeTab === "text" && (
         <div className="p-4 space-y-4">
           {/* AI Button */}
           {hasSelection && (
@@ -337,7 +360,68 @@ export function Toolbox({
             </div>
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === "design" && (
+        <div className="p-4 space-y-5">
+          {/* Divider Color */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-2 block">
+              Divider Color
+            </label>
+            <div className="grid grid-cols-6 gap-1.5">
+              {COLORS.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setDividerColor(color)}
+                  className={`w-7 h-7 rounded-full border ${dividerColor === color ? 'ring-2 ring-blue-500 ring-offset-1' : 'border-gray-200'}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Divider Thickness */}
+          <div>
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium text-gray-500">
+                Divider Thickness
+              </label>
+              <span className="text-xs font-medium text-gray-400">{dividerHeight}px</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="5"
+              step="0.5"
+              value={dividerHeight}
+              onChange={(e) => setDividerHeight(parseFloat(e.target.value))}
+              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+          </div>
+
+          {/* Title Gap */}
+          <div>
+            <div className="flex justify-between mb-1">
+              <label className="text-xs font-medium text-gray-500">
+                Title-Divider Gap
+              </label>
+              <span className="text-xs font-medium text-gray-400">{titleDividerGap}px</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              step="1"
+              value={titleDividerGap}
+              onChange={(e) => setTitleDividerGap(parseInt(e.target.value))}
+              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+          </div>
+        </div>
+      )}
+
+      {activeTab === "section" && (
         <div className="p-4 space-y-2">
           {[
             "Professional Summary",

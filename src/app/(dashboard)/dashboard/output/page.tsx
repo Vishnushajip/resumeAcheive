@@ -18,6 +18,8 @@ import {
   Save,
   Sparkles,
   X,
+  Trash2,
+  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -133,6 +135,20 @@ export default function OutputPage() {
   }>({ visible: false, x: 0, y: 0 });
   const [showTutorial, setShowTutorial] = useState(true);
   const [mobileScale, setMobileScale] = useState(0.45);
+  const [draggedSection, setDraggedSection] = useState<string | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null);
+  const [sectionOrder, setSectionOrder] = useState([
+    "summary",
+    "experience",
+    "education",
+    "skills",
+    "projects",
+  ]);
+  const [hiddenSections, setHiddenSections] = useState<string[]>([]);
+  const [hoveredSection, setHoveredSection] = useState<string | null>(null);
+  const [dividerHeight, setDividerHeight] = useState(1);
+  const [dividerColor, setDividerColor] = useState("");
+  const [titleDividerGap, setTitleDividerGap] = useState(10);
 
   const {
     state: editorState,
@@ -151,7 +167,6 @@ export default function OutputPage() {
     duplicateElement,
   } = useEditor();
 
-  // Load CV data
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -161,6 +176,9 @@ export default function OutputPage() {
           const rawCV = data?.cvData || data?.data?.cvData || data;
           if (rawCV) {
             setLocalResumeData(normalizeResume(rawCV));
+            // Initialize divider color from template if not set
+            const config = getTemplateById(editorState.currentTemplate);
+            if (!dividerColor) setDividerColor(config.colors.divider);
           }
         } else if (resumeData) {
           setLocalResumeData(normalizeResume(resumeData));
@@ -174,17 +192,13 @@ export default function OutputPage() {
     loadData();
   }, [cvId, resumeData]);
 
-  // Detect mobile
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, [setIsMobile]);
 
-  // Handle text selection
   useEffect(() => {
     const handleSelection = () => {
       const selection = window.getSelection();
@@ -192,20 +206,12 @@ export default function OutputPage() {
         setSelectedText(selection.toString());
         const element = selection.anchorNode?.parentElement as HTMLElement;
         setSelectedElement(element);
-
-        // Show floating toolbar near selection
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
-        // Calculate center but keep within viewport bounds (with padding)
         let centerX = rect.left + rect.width / 2;
         centerX = Math.max(100, Math.min(viewportWidth - 100, centerX));
-        setFloatingToolbar({
-          visible: true,
-          x: centerX,
-          y: rect.top - 50,
-        });
-        // Hide tutorial once user starts selecting text
+        setFloatingToolbar({ visible: true, x: centerX, y: rect.top - 50 });
         setShowTutorial(false);
       } else {
         setSelectedText("");
@@ -213,13 +219,11 @@ export default function OutputPage() {
         setFloatingToolbar((prev) => ({ ...prev, visible: false }));
       }
     };
-
     document.addEventListener("selectionchange", handleSelection);
     return () =>
       document.removeEventListener("selectionchange", handleSelection);
   }, []);
 
-  // Handle click outside to hide toolbar
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -231,19 +235,12 @@ export default function OutputPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Prevent default context menu on resume content and show custom toolbar
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Only prevent if clicking inside the resume editor
       if (target.closest("[data-resume-content]") && selectedText) {
         e.preventDefault();
-        // Show toolbar at mouse position
-        setFloatingToolbar({
-          visible: true,
-          x: e.clientX,
-          y: e.clientY - 50,
-        });
+        setFloatingToolbar({ visible: true, x: e.clientX, y: e.clientY - 50 });
       }
     };
     document.addEventListener("contextmenu", handleContextMenu);
@@ -251,15 +248,6 @@ export default function OutputPage() {
   }, [selectedText]);
 
   const handleSave = async () => {
-    console.log(
-      "Save clicked - cvId:",
-      cvId,
-      "has resumeRef:",
-      !!resumeRef.current,
-      "has localResumeData:",
-      !!localResumeData,
-    );
-
     if (!resumeRef.current) {
       toast.error("Resume not loaded");
       return;
@@ -268,84 +256,61 @@ export default function OutputPage() {
       toast.error("Resume data not loaded");
       return;
     }
-
     setIsSaving(true);
     try {
-      // Extract updated data from the editable resume
       const updatedData = extractResumeDataFromDOM(resumeRef.current);
-      console.log("Extracted data:", updatedData);
-
-      // Prepare data according to backend API structure
       const saveData = {
         title:
           updatedData.personalInfo?.fullName ||
           localResumeData.personalInfo?.fullName ||
           "My Resume",
-        cvData: {
-          ...localResumeData,
-          ...updatedData,
-        },
+        cvData: { ...localResumeData, ...updatedData },
         templateId: editorState.currentTemplate,
         isActive: true,
       };
-      console.log("Saving data:", saveData);
-
       let result;
       if (cvId) {
-        // Update existing CV
         result = await cvService.updateCV(cvId, saveData);
         toast.success("Resume updated successfully!");
       } else {
-        // Create new CV
         result = await cvService.createCV(saveData);
         toast.success("New resume created successfully!");
-        // Update URL with new CV ID
-        if (result?.id) {
-          router.push(`/dashboard/output?id=${result.id}`);
-        }
+        if (result?.id) router.push(`/dashboard/output?id=${result.id}`);
       }
-      console.log("Save result:", result);
     } catch (error) {
-      console.error("Save error:", error);
       toast.error("Failed to save resume");
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Helper function to extract resume data from DOM
   const extractResumeDataFromDOM = (
     container: HTMLElement,
   ): Partial<ResumeData> => {
     const data: Partial<ResumeData> = {};
-
-    // Extract personal info
     const header = container.querySelector("header");
     if (header) {
-      const nameEl = header.querySelector("h1");
-      const titleEl = header.querySelector("p");
-      const contactDiv = header.querySelector("div:last-child");
-
       data.personalInfo = {
-        fullName: nameEl?.textContent || "",
-        title: titleEl?.textContent || "",
-        email: contactDiv?.children[0]?.textContent || "",
-        phone: contactDiv?.children[1]?.textContent || "",
-        location: contactDiv?.children[2]?.textContent || "",
+        fullName: header.querySelector("h1")?.textContent || "",
+        title: header.querySelector("p")?.textContent || "",
+        email:
+          header.querySelector("div:last-child")?.children[0]?.textContent ||
+          "",
+        phone:
+          header.querySelector("div:last-child")?.children[1]?.textContent ||
+          "",
+        location:
+          header.querySelector("div:last-child")?.children[2]?.textContent ||
+          "",
       };
     }
-
-    // Extract summary
     const summarySection = Array.from(
       container.querySelectorAll("section"),
     ).find((s) =>
       s.querySelector("h2")?.textContent?.toLowerCase().includes("summary"),
     );
-    if (summarySection) {
+    if (summarySection)
       data.summary = summarySection.querySelector("p")?.textContent || "";
-    }
-
-    // Extract experience
     const expSection = Array.from(container.querySelectorAll("section")).find(
       (s) =>
         s
@@ -354,8 +319,9 @@ export default function OutputPage() {
           .includes("experience"),
     );
     if (expSection) {
-      const expItems = expSection.querySelectorAll("div > div");
-      data.experience = Array.from(expItems).map((item) => ({
+      data.experience = Array.from(
+        expSection.querySelectorAll("div > div"),
+      ).map((item) => ({
         role: item.querySelector("h3")?.textContent || "",
         duration: item.querySelector("span")?.textContent || "",
         company: item.querySelector("p")?.textContent || "",
@@ -364,65 +330,66 @@ export default function OutputPage() {
         ),
       }));
     }
-
-    // Extract education
     const eduSection = Array.from(container.querySelectorAll("section")).find(
       (s) =>
         s.querySelector("h2")?.textContent?.toLowerCase().includes("education"),
     );
     if (eduSection) {
-      const eduItems = eduSection.querySelectorAll("div > div");
-      data.education = Array.from(eduItems).map((item) => ({
-        degree: item.querySelector("h3")?.textContent || "",
-        year: item.querySelector("span")?.textContent || "",
-        institution: item.querySelector("p")?.textContent || "",
-      }));
+      data.education = Array.from(eduSection.querySelectorAll("div > div")).map(
+        (item) => ({
+          degree: item.querySelector("h3")?.textContent || "",
+          year: item.querySelector("span")?.textContent || "",
+          institution: item.querySelector("p")?.textContent || "",
+        }),
+      );
     }
-
-    // Extract skills
     const skillsSection = Array.from(
       container.querySelectorAll("section"),
     ).find((s) =>
       s.querySelector("h2")?.textContent?.toLowerCase().includes("skills"),
     );
-    if (skillsSection) {
-      const skillItems = skillsSection.querySelectorAll("span");
-      data.skills = Array.from(skillItems)
+    if (skillsSection)
+      data.skills = Array.from(skillsSection.querySelectorAll("span"))
         .map((s) => s.textContent || "")
         .filter(Boolean);
-    }
-
-    // Extract projects
     const projSection = Array.from(container.querySelectorAll("section")).find(
       (s) =>
         s.querySelector("h2")?.textContent?.toLowerCase().includes("project"),
     );
     if (projSection) {
-      const projItems = projSection.querySelectorAll("div > div");
-      data.projects = Array.from(projItems).map((item) => ({
-        name: item.querySelector("h3")?.textContent || "",
-        points: Array.from(item.querySelectorAll("li")).map(
-          (li) => li.textContent || "",
-        ),
-      }));
+      data.projects = Array.from(projSection.querySelectorAll("div > div")).map(
+        (item) => ({
+          name: item.querySelector("h3")?.textContent || "",
+          points: Array.from(item.querySelectorAll("li")).map(
+            (li) => li.textContent || "",
+          ),
+        }),
+      );
     }
-
     return data;
   };
 
+  const selectionRangeRef = useRef<Range | null>(null);
+
   const handleOpenAI = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      selectionRangeRef.current = selection.getRangeAt(0).cloneRange();
+    }
     const section =
       selectedElement?.closest("section")?.querySelector("h2")?.textContent ||
       "text";
-    setAiModalContext({
-      isOpen: true,
-      text: selectedText,
-      section,
-    });
+    setAiModalContext({ isOpen: true, text: selectedText, section });
   };
 
   const handleApplyAI = (newText: string) => {
-    if (selectedElement) {
+    const range = selectionRangeRef.current;
+    if (range) {
+      range.deleteContents();
+      range.insertNode(document.createTextNode(newText));
+      window.getSelection()?.removeAllRanges();
+      selectionRangeRef.current = null;
+    } else if (selectedElement) {
       selectedElement.textContent = newText;
     }
     setAiModalContext({ ...aiModalContext, isOpen: false });
@@ -430,14 +397,15 @@ export default function OutputPage() {
 
   const handleAddSection = (type: string) => {
     if (!resumeRef.current) return;
-
     const section = document.createElement("section");
-    section.className = "mb-6";
+    section.className = "mb-5";
+    section.setAttribute("data-section", type.toLowerCase());
     section.innerHTML = `
-      <h2 class="text-sm font-bold uppercase tracking-wider border-b-2 pb-1 mb-3" contenteditable="true" style="color: ${templateConfig.colors.primary}; border-color: ${templateConfig.colors.accent};">
+      <h2 class="text-[13px] font-bold uppercase tracking-wider mb-0.5" contentEditable="true" style="color: ${templateConfig.colors.primary}; font-family: ${templateConfig.fonts.heading}; margin-bottom: ${titleDividerGap}px !important;">
         ${type}
       </h2>
-      <div contenteditable="true" class="text-gray-700">
+      <div class="mb-2" style="height: ${dividerHeight}px; background-color: ${dividerColor || templateConfig.colors.divider}; width: 100%;"></div>
+      <div contenteditable="true" class="text-gray-700" style="color: ${templateConfig.colors.text}; font-family: ${templateConfig.fonts.body};">
         <p>Click to add ${type.toLowerCase()} details...</p>
       </div>
     `;
@@ -445,9 +413,46 @@ export default function OutputPage() {
     toast.success(`${type} section added!`);
   };
 
+  // Drag handlers
+  const handleDragStart = (e: React.DragEvent, sectionId: string) => {
+    setDraggedSection(sectionId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, sectionId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (sectionId !== draggedSection) setDragOverSection(sectionId);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedSection || draggedSection === targetId) return;
+    setSectionOrder((prev) => {
+      const newOrder = [...prev];
+      const fromIdx = newOrder.indexOf(draggedSection);
+      const toIdx = newOrder.indexOf(targetId);
+      newOrder.splice(fromIdx, 1);
+      newOrder.splice(toIdx, 0, draggedSection);
+      return newOrder;
+    });
+    setDraggedSection(null);
+    setDragOverSection(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSection(null);
+    setDragOverSection(null);
+  };
+
+  // Delete/hide a section
+  const handleDeleteSection = (sectionId: string) => {
+    setHiddenSections((prev) => [...prev, sectionId]);
+    toast.success("Section removed");
+  };
+
   const resume = localResumeData;
   const templateConfig = getTemplateById(editorState.currentTemplate);
-
   const skillsArray = Array.isArray(resume?.skills)
     ? resume.skills
     : [...(resume?.skills?.technical || []), ...(resume?.skills?.soft || [])];
@@ -477,6 +482,411 @@ export default function OutputPage() {
     );
   }
 
+  // Section renderer
+  const renderSection = (sectionId: string) => {
+    if (hiddenSections.includes(sectionId)) return null;
+
+    const isDragging = draggedSection === sectionId;
+    const isDragOver = dragOverSection === sectionId;
+    const isHovered = hoveredSection === sectionId;
+
+    const wrapperStyle: React.CSSProperties = {
+      position: "relative",
+      opacity: isDragging ? 0.4 : 1,
+      borderTop: isDragOver
+        ? `2px solid ${templateConfig.colors.accent}`
+        : "2px solid transparent",
+      transition: "border-color 0.15s, opacity 0.15s",
+    };
+
+    const sectionControls = isHovered ? (
+      <div
+        data-no-export="true"
+        contentEditable={false}
+        style={{
+          position: "absolute",
+          top: "2px",
+          right: "2px",
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          background: "rgba(255,255,255,0.97)",
+          border: "1px solid #e5e7eb",
+          borderRadius: "6px",
+          padding: "2px 6px",
+          zIndex: 20,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+          userSelect: "none" as const,
+        }}
+      >
+        <div
+          title="Drag to reorder"
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            handleDragStart(e, sectionId);
+          }}
+          onDragEnd={handleDragEnd}
+          style={{
+            cursor: "grab",
+            padding: "4px",
+            color: "#9ca3af",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <GripVertical size={14} />
+        </div>
+        <div style={{ width: "1px", height: "14px", background: "#e5e7eb" }} />
+        <button
+          title="Delete section"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDeleteSection(sectionId);
+          }}
+          style={{
+            padding: "4px",
+            color: "#ef4444",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            borderRadius: "4px",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    ) : null;
+
+    const h2Style = {
+      color: templateConfig.colors.primary,
+      borderColor: templateConfig.colors.accent,
+      fontFamily: templateConfig.fonts.heading,
+    };
+
+    if (sectionId === "summary" && resume.summary) {
+      return (
+        <div
+          key="summary"
+          style={wrapperStyle}
+          onMouseEnter={() => setHoveredSection("summary")}
+          onMouseLeave={() => setHoveredSection(null)}
+          onDragOver={(e) => handleDragOver(e, "summary")}
+          onDrop={(e) => handleDrop(e, "summary")}
+        >
+          {sectionControls}
+          <section className="mb-4" data-section="summary">
+            <h2
+              className="text-[13px] font-bold uppercase tracking-wider"
+              contentEditable
+              suppressContentEditableWarning
+              style={{ ...h2Style, marginBottom: `${titleDividerGap}px` }}
+            >
+              Professional Summary
+            </h2>
+            <div
+              className="mb-2"
+              style={{
+                height: `${dividerHeight}px`,
+                backgroundColor: dividerColor || templateConfig.colors.divider,
+                width: "100%",
+              }}
+            />
+            <p
+              className="text-[14px] leading-relaxed"
+              contentEditable
+              suppressContentEditableWarning
+              style={{ color: templateConfig.colors.text }}
+            >
+              {resume.summary}
+            </p>
+          </section>
+        </div>
+      );
+    }
+
+    if (
+      sectionId === "experience" &&
+      resume.experience &&
+      resume.experience.length > 0
+    ) {
+      return (
+        <div
+          key="experience"
+          style={wrapperStyle}
+          onMouseEnter={() => setHoveredSection("experience")}
+          onMouseLeave={() => setHoveredSection(null)}
+          onDragOver={(e) => handleDragOver(e, "experience")}
+          onDrop={(e) => handleDrop(e, "experience")}
+        >
+          {sectionControls}
+          <section className="mb-4" data-section="experience">
+            <h2
+              className="text-[13px] font-bold uppercase tracking-wider"
+              contentEditable
+              suppressContentEditableWarning
+              style={{ ...h2Style, marginBottom: `${titleDividerGap}px` }}
+            >
+              Experience
+            </h2>
+            <div
+              className="mb-2"
+              style={{
+                height: `${dividerHeight}px`,
+                backgroundColor: dividerColor || templateConfig.colors.divider,
+                width: "100%",
+              }}
+            />
+            <div className="space-y-3">
+              {resume.experience.map((exp, index) => (
+                <div key={index}>
+                  <div className="flex justify-between items-start mb-1">
+                    <h3
+                      className="font-semibold"
+                      contentEditable
+                      suppressContentEditableWarning
+                      style={{ color: templateConfig.colors.primary }}
+                    >
+                      {exp.role || exp.position}
+                    </h3>
+                    <span
+                      className="text-sm"
+                      contentEditable
+                      suppressContentEditableWarning
+                      style={{ color: templateConfig.colors.secondary }}
+                    >
+                      {exp.duration}
+                    </span>
+                  </div>
+                  <p
+                    className="mb-2"
+                    contentEditable
+                    suppressContentEditableWarning
+                    style={{ color: templateConfig.colors.secondary }}
+                  >
+                    {exp.company}
+                  </p>
+                  {exp.points && exp.points.length > 0 && (
+                    <ul className="list-disc list-inside space-y-1">
+                      {exp.points.map((point, i) => (
+                        <li
+                          key={i}
+                          className="text-[13px]"
+                          contentEditable
+                          suppressContentEditableWarning
+                          style={{ color: templateConfig.colors.text }}
+                        >
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    if (
+      sectionId === "education" &&
+      resume.education &&
+      resume.education.length > 0
+    ) {
+      return (
+        <div
+          key="education"
+          style={wrapperStyle}
+          onMouseEnter={() => setHoveredSection("education")}
+          onMouseLeave={() => setHoveredSection(null)}
+          onDragOver={(e) => handleDragOver(e, "education")}
+          onDrop={(e) => handleDrop(e, "education")}
+        >
+          {sectionControls}
+          <section className="mb-4" data-section="education">
+            <h2
+              className="text-[13px] font-bold uppercase tracking-wider"
+              contentEditable
+              suppressContentEditableWarning
+              style={{ ...h2Style, marginBottom: `${titleDividerGap}px` }}
+            >
+              Education
+            </h2>
+            <div
+              className="mb-2"
+              style={{
+                height: `${dividerHeight}px`,
+                backgroundColor: dividerColor || templateConfig.colors.divider,
+                width: "100%",
+              }}
+            />
+            <div className="space-y-2">
+              {resume.education.map((edu, index) => (
+                <div key={index}>
+                  <div className="flex justify-between items-start">
+                    <h3
+                      className="font-semibold"
+                      contentEditable
+                      suppressContentEditableWarning
+                      style={{ color: templateConfig.colors.primary }}
+                    >
+                      {edu.degree}
+                    </h3>
+                    <span
+                      className="text-sm"
+                      contentEditable
+                      suppressContentEditableWarning
+                      style={{ color: templateConfig.colors.secondary }}
+                    >
+                      {edu.year}
+                    </span>
+                  </div>
+                  <p
+                    contentEditable
+                    suppressContentEditableWarning
+                    style={{ color: templateConfig.colors.secondary }}
+                  >
+                    {edu.institution}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    if (
+      sectionId === "skills" &&
+      skillsArray.filter((s) => s && String(s).trim()).length > 0
+    ) {
+      return (
+        <div
+          key="skills"
+          style={wrapperStyle}
+          onMouseEnter={() => setHoveredSection("skills")}
+          onMouseLeave={() => setHoveredSection(null)}
+          onDragOver={(e) => handleDragOver(e, "skills")}
+          onDrop={(e) => handleDrop(e, "skills")}
+        >
+          {sectionControls}
+          <section className="mb-4" data-section="skills">
+            <h2
+              className="text-[13px] font-bold uppercase tracking-wider"
+              contentEditable
+              suppressContentEditableWarning
+              style={{ ...h2Style, marginBottom: `${titleDividerGap}px` }}
+            >
+              Skills
+            </h2>
+            <div
+              className="mb-2"
+              style={{
+                height: `${dividerHeight}px`,
+                backgroundColor: dividerColor || templateConfig.colors.divider,
+                width: "100%",
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              {skillsArray
+                .filter((s) => s && String(s).trim())
+                .map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 rounded text-sm"
+                    contentEditable
+                    suppressContentEditableWarning
+                    style={{
+                      background:
+                        templateConfig.layout.skillsStyle === "tags"
+                          ? templateConfig.colors.accent + "20"
+                          : "transparent",
+                      color: templateConfig.colors.text,
+                      fontSize: "13px",
+                    }}
+                  >
+                    {skill}
+                  </span>
+                ))}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    if (
+      sectionId === "projects" &&
+      resume.projects &&
+      resume.projects.length > 0
+    ) {
+      return (
+        <div
+          key="projects"
+          style={wrapperStyle}
+          onMouseEnter={() => setHoveredSection("projects")}
+          onMouseLeave={() => setHoveredSection(null)}
+          onDragOver={(e) => handleDragOver(e, "projects")}
+          onDrop={(e) => handleDrop(e, "projects")}
+        >
+          {sectionControls}
+          <section className="mb-4" data-section="projects">
+            <h2
+              className="text-[13px] font-bold uppercase tracking-wider"
+              contentEditable
+              suppressContentEditableWarning
+              style={{ ...h2Style, marginBottom: `${titleDividerGap}px` }}
+            >
+              Projects
+            </h2>
+            <div
+              className="mb-2"
+              style={{
+                height: `${dividerHeight}px`,
+                backgroundColor: dividerColor || templateConfig.colors.divider,
+                width: "100%",
+              }}
+            />
+            <div className="space-y-3">
+              {resume.projects.map((proj, index) => (
+                <div key={index}>
+                  <h3
+                    className="font-semibold mb-1"
+                    contentEditable
+                    suppressContentEditableWarning
+                    style={{ color: templateConfig.colors.primary }}
+                  >
+                    {proj.name}
+                  </h3>
+                  {proj.points && proj.points.length > 0 && (
+                    <ul className="list-disc list-inside space-y-1">
+                      {proj.points.map((point, i) => (
+                        <li
+                          key={i}
+                          className="text-[13px]"
+                          contentEditable
+                          suppressContentEditableWarning
+                          style={{ color: templateConfig.colors.text }}
+                        >
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -500,27 +910,19 @@ export default function OutputPage() {
               <div className="flex items-center bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("desktop")}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === "desktop"
-                      ? "bg-white shadow-sm"
-                      : "text-gray-500"
-                  }`}
+                  className={`p-2 rounded-md transition-colors ${viewMode === "desktop" ? "bg-white shadow-sm" : "text-gray-500"}`}
                 >
                   <Monitor className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("mobile")}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === "mobile"
-                      ? "bg-white shadow-sm"
-                      : "text-gray-500"
-                  }`}
+                  className={`p-2 rounded-md transition-colors ${viewMode === "mobile" ? "bg-white shadow-sm" : "text-gray-500"}`}
                 >
                   <Smartphone className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Zoom Controls - Desktop */}
+              {/* Zoom Controls Desktop */}
               <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setZoom(Math.max(50, editorState.zoom - 10))}
@@ -548,11 +950,9 @@ export default function OutputPage() {
                 </button>
                 <button
                   onClick={() => {
-                    // Fit to screen - calculate scale based on container width
-                    const containerWidth = window.innerWidth - 400; // Account for sidebars
                     const scale = Math.min(
                       100,
-                      Math.floor((containerWidth / 794) * 100),
+                      Math.floor(((window.innerWidth - 400) / 794) * 100),
                     );
                     setZoom(Math.max(50, scale));
                   }}
@@ -563,7 +963,7 @@ export default function OutputPage() {
                 </button>
               </div>
 
-              {/* Zoom Controls - Mobile */}
+              {/* Zoom Controls Mobile */}
               {viewMode === "mobile" && (
                 <div className="flex sm:hidden items-center bg-gray-100 rounded-lg p-1">
                   <button
@@ -571,7 +971,6 @@ export default function OutputPage() {
                       setMobileScale(Math.max(0.25, mobileScale - 0.05))
                     }
                     className="p-2 rounded-md hover:bg-white transition-colors"
-                    title="Zoom Out"
                   >
                     <ZoomOut className="h-4 w-4" />
                   </button>
@@ -583,26 +982,24 @@ export default function OutputPage() {
                       setMobileScale(Math.min(1.0, mobileScale + 0.05))
                     }
                     className="p-2 rounded-md hover:bg-white transition-colors"
-                    title="Zoom In"
                   >
                     <ZoomIn className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => {
-                      // Fit to screen - calculate scale based on mobile screen width
-                      const screenWidth = window.innerWidth - 32;
-                      const scale = Math.min(0.8, screenWidth / 794);
+                      const scale = Math.min(
+                        0.8,
+                        (window.innerWidth - 32) / 794,
+                      );
                       setMobileScale(Math.max(0.25, scale));
                     }}
                     className="px-2 py-1.5 rounded-md hover:bg-white transition-colors text-xs font-medium"
-                    title="Fit to Screen"
                   >
                     Fit
                   </button>
                 </div>
               )}
 
-              {/* Template Button */}
               <Button
                 variant="outline"
                 size="sm"
@@ -613,7 +1010,6 @@ export default function OutputPage() {
                 Template
               </Button>
 
-              {/* Save Button */}
               <Button
                 size="sm"
                 onClick={handleSave}
@@ -658,6 +1054,7 @@ export default function OutputPage() {
                   </div>
                 )}
               </div>
+
               <Button
                 size="sm"
                 variant="outline"
@@ -675,7 +1072,7 @@ export default function OutputPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar - Toolbox (Desktop) */}
+          {/* Left Sidebar */}
           <div className="hidden lg:block lg:w-72 flex-shrink-0">
             <div className="sticky top-24">
               <Toolbox
@@ -687,17 +1084,47 @@ export default function OutputPage() {
                 onDuplicateElement={duplicateElement}
                 onOpenAI={handleOpenAI}
                 hasSelection={!!selectedText}
+                dividerHeight={dividerHeight}
+                setDividerHeight={setDividerHeight}
+                dividerColor={dividerColor}
+                setDividerColor={setDividerColor}
+                titleDividerGap={titleDividerGap}
+                setTitleDividerGap={setTitleDividerGap}
               />
+              {/* Restore hidden sections */}
+              {hiddenSections.length > 0 && (
+                <div className="mt-4 bg-white rounded-xl shadow-sm p-4">
+                  <h3 className="font-semibold text-sm mb-2 text-gray-700">
+                    Hidden Sections
+                  </h3>
+                  <div className="space-y-1">
+                    {hiddenSections.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() =>
+                          setHiddenSections((prev) =>
+                            prev.filter((x) => x !== s),
+                          )
+                        }
+                        className="w-full text-left text-xs px-3 py-2 rounded-lg bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-600 capitalize transition-colors"
+                      >
+                        + Restore {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Center - Resume Preview */}
+          {/* Center - Resume */}
           <div className="flex-1 min-w-0 overflow-x-auto">
             <div
               className="mx-auto bg-white shadow-xl transition-all duration-300"
               style={{
-                width: "794px", // Fixed A4 width
-                minHeight: "1123px", // Fixed A4 height
+                width: "794px",
+                minHeight: "1123px",
+                height: "auto",
                 maxWidth: "none",
                 transform: `scale(${viewMode === "mobile" ? mobileScale : editorState.zoom / 100})`,
                 transformOrigin: "top center",
@@ -715,17 +1142,20 @@ export default function OutputPage() {
               >
                 {/* Tutorial Tooltip */}
                 {showTutorial && (
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 animate-in fade-in slide-in-from-top-2 duration-500">
+                  <div
+                    data-no-export="true"
+                    className="absolute top-4 left-1/2 -translate-x-1/2 z-20 animate-in fade-in slide-in-from-top-2 duration-500"
+                  >
                     <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-xl shadow-xl shadow-purple-500/30 max-w-xs">
                       <div className="flex items-start gap-3">
                         <Sparkles className="h-5 w-5 mt-0.5 shrink-0" />
                         <div>
                           <p className="font-semibold text-sm">
-                            Pro Tip: AI Enhancement
+                            Pro Tip: Drag & Drop Sections
                           </p>
                           <p className="text-xs text-white/90 mt-1">
-                            Select any text and click "Ask AI" to improve it
-                            instantly!
+                            Hover any section to drag, reorder, or delete it.
+                            Select text to use AI!
                           </p>
                         </div>
                         <button
@@ -735,14 +1165,14 @@ export default function OutputPage() {
                           <X className="h-4 w-4" />
                         </button>
                       </div>
-                      {/* Arrow pointing down */}
                       <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-blue-600 transform rotate-45" />
                     </div>
                   </div>
                 )}
+
                 {/* Header */}
                 <header
-                  className="mb-6"
+                  className="mb-5"
                   style={{
                     textAlign:
                       templateConfig.layout.headerStyle === "centered"
@@ -763,7 +1193,7 @@ export default function OutputPage() {
                   }}
                 >
                   <h1
-                    className="text-2xl font-bold mb-1"
+                    className="text-xl font-bold mb-1"
                     contentEditable
                     suppressContentEditableWarning
                     style={{
@@ -777,7 +1207,7 @@ export default function OutputPage() {
                     {resume.personalInfo?.fullName}
                   </h1>
                   <p
-                    className="text-base mb-2"
+                    className="text-sm mb-1"
                     contentEditable
                     suppressContentEditableWarning
                     style={{
@@ -820,234 +1250,13 @@ export default function OutputPage() {
                   </div>
                 </header>
 
-                {/* Summary */}
-                {resume.summary && (
-                  <section className="mb-6">
-                    <h2
-                      className="text-sm font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{
-                        color: templateConfig.colors.primary,
-                        borderColor: templateConfig.colors.accent,
-                        fontFamily: templateConfig.fonts.heading,
-                      }}
-                    >
-                      Professional Summary
-                    </h2>
-                    <p
-                      className="leading-relaxed"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{ color: templateConfig.colors.text }}
-                    >
-                      {resume.summary}
-                    </p>
-                  </section>
-                )}
-
-                {/* Experience */}
-                {resume.experience && resume.experience.length > 0 && (
-                  <section className="mb-6">
-                    <h2
-                      className="text-sm font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{
-                        color: templateConfig.colors.primary,
-                        borderColor: templateConfig.colors.accent,
-                        fontFamily: templateConfig.fonts.heading,
-                      }}
-                    >
-                      Experience
-                    </h2>
-                    <div className="space-y-4">
-                      {resume.experience.map((exp, index) => (
-                        <div key={index}>
-                          <div className="flex justify-between items-start mb-1">
-                            <h3
-                              className="font-semibold"
-                              contentEditable
-                              suppressContentEditableWarning
-                              style={{ color: templateConfig.colors.primary }}
-                            >
-                              {exp.role}
-                            </h3>
-                            <span
-                              className="text-sm"
-                              contentEditable
-                              suppressContentEditableWarning
-                              style={{ color: templateConfig.colors.secondary }}
-                            >
-                              {exp.duration}
-                            </span>
-                          </div>
-                          <p
-                            className="mb-2"
-                            contentEditable
-                            suppressContentEditableWarning
-                            style={{ color: templateConfig.colors.secondary }}
-                          >
-                            {exp.company}
-                          </p>
-                          {exp.points && exp.points.length > 0 ? (
-                            <ul className="list-disc list-inside space-y-1">
-                              {exp.points.map((point, i) => (
-                                <li
-                                  key={i}
-                                  className="text-sm"
-                                  contentEditable
-                                  suppressContentEditableWarning
-                                  style={{ color: templateConfig.colors.text }}
-                                >
-                                  {point}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Education */}
-                {resume.education && resume.education.length > 0 && (
-                  <section className="mb-6">
-                    <h2
-                      className="text-sm font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{
-                        color: templateConfig.colors.primary,
-                        borderColor: templateConfig.colors.accent,
-                        fontFamily: templateConfig.fonts.heading,
-                      }}
-                    >
-                      Education
-                    </h2>
-                    <div className="space-y-3">
-                      {resume.education.map((edu, index) => (
-                        <div key={index}>
-                          <div className="flex justify-between items-start">
-                            <h3
-                              className="font-semibold"
-                              contentEditable
-                              suppressContentEditableWarning
-                              style={{ color: templateConfig.colors.primary }}
-                            >
-                              {edu.degree}
-                            </h3>
-                            <span
-                              className="text-sm"
-                              contentEditable
-                              suppressContentEditableWarning
-                              style={{ color: templateConfig.colors.secondary }}
-                            >
-                              {edu.year}
-                            </span>
-                          </div>
-                          <p
-                            contentEditable
-                            suppressContentEditableWarning
-                            style={{ color: templateConfig.colors.secondary }}
-                          >
-                            {edu.institution}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Skills */}
-                {skillsArray.length > 0 && (
-                  <section className="mb-6">
-                    <h2
-                      className="text-sm font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{
-                        color: templateConfig.colors.primary,
-                        borderColor: templateConfig.colors.accent,
-                        fontFamily: templateConfig.fonts.heading,
-                      }}
-                    >
-                      Skills
-                    </h2>
-                    <div className="flex flex-wrap gap-2">
-                      {skillsArray.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 rounded text-sm"
-                          contentEditable
-                          suppressContentEditableWarning
-                          style={{
-                            background:
-                              templateConfig.layout.skillsStyle === "tags"
-                                ? templateConfig.colors.accent + "20"
-                                : "transparent",
-                            color: templateConfig.colors.text,
-                          }}
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Projects */}
-                {resume.projects && resume.projects.length > 0 && (
-                  <section className="mb-6">
-                    <h2
-                      className="text-sm font-bold uppercase tracking-wider border-b-2 pb-1 mb-3"
-                      contentEditable
-                      suppressContentEditableWarning
-                      style={{
-                        color: templateConfig.colors.primary,
-                        borderColor: templateConfig.colors.accent,
-                        fontFamily: templateConfig.fonts.heading,
-                      }}
-                    >
-                      Projects
-                    </h2>
-                    <div className="space-y-4">
-                      {resume.projects.map((proj, index) => (
-                        <div key={index}>
-                          <h3
-                            className="font-semibold mb-1"
-                            contentEditable
-                            suppressContentEditableWarning
-                            style={{ color: templateConfig.colors.primary }}
-                          >
-                            {proj.name}
-                          </h3>
-                          {proj.points && proj.points.length > 0 ? (
-                            <ul className="list-disc list-inside space-y-1">
-                              {proj.points.map((point, i) => (
-                                <li
-                                  key={i}
-                                  className="text-sm"
-                                  contentEditable
-                                  suppressContentEditableWarning
-                                  style={{ color: templateConfig.colors.text }}
-                                >
-                                  {point}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
+                {/* ✅ Draggable sections — inside the resume div */}
+                {sectionOrder.map((sectionId) => renderSection(sectionId))}
               </div>
             </div>
           </div>
 
-          {/* Right Sidebar - ATS Score (Desktop) */}
+          {/* Right Sidebar - ATS Score */}
           <div className="hidden xl:block xl:w-64 flex-shrink-0">
             <div className="sticky top-24 space-y-4">
               {atsData?.score && (
@@ -1098,7 +1307,6 @@ export default function OutputPage() {
                   </div>
                 </div>
               )}
-
               {atsData?.tips && atsData.tips.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-4">
                   <h3 className="font-semibold mb-2 text-sm">Tips</h3>
@@ -1120,7 +1328,7 @@ export default function OutputPage() {
         </div>
       </main>
 
-      {/* Floating AI Toolbar - appears when text is selected */}
+      {/* Floating AI Toolbar */}
       {floatingToolbar.visible && selectedText && (
         <div
           data-floating-toolbar
@@ -1161,12 +1369,10 @@ export default function OutputPage() {
               Select All
             </button>
           </div>
-          {/* Arrow pointing down */}
           <div className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-3 bg-gray-900 border-r border-b border-gray-700 transform rotate-45" />
         </div>
       )}
 
-      {/* Mobile Toolbox */}
       <MobileToolbox
         isOpen={editorState.showToolbox}
         onClose={toggleToolbox}
@@ -1178,7 +1384,6 @@ export default function OutputPage() {
         hasSelection={!!selectedText}
       />
 
-      {/* AI Suggestion Modal */}
       <AISuggestionModal
         isOpen={aiModalContext.isOpen}
         onClose={() => setAiModalContext({ ...aiModalContext, isOpen: false })}
@@ -1187,7 +1392,6 @@ export default function OutputPage() {
         onApply={handleApplyAI}
       />
 
-      {/* Template Selector */}
       <TemplateSelector
         isOpen={editorState.showTemplateSelector}
         onClose={toggleTemplateSelector}
@@ -1195,7 +1399,6 @@ export default function OutputPage() {
         onSelect={setTemplate}
       />
 
-      {/* Click outside to close export menu */}
       {showExportMenu && (
         <div
           className="fixed inset-0 z-30"
